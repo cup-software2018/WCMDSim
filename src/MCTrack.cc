@@ -33,7 +33,11 @@ MCStep * MCTrack::AddStep()
   return &fSteps.back();
 }
 
-void MCTrack::Clear(Option_t * opt) { fSteps.clear(); }
+void MCTrack::Clear(Option_t * opt)
+{
+  fRegionMask = 0;
+  fSteps.clear();
+}
 
 void MCTrack::Print(Option_t * opt) const
 {
@@ -44,5 +48,6 @@ void MCTrack::Print(Option_t * opt) const
   std::cout << std::fixed << std::setprecision(6);
   std::cout << "     Global Time  = " << fGlobalTime << " [ns]\n";
   std::cout << "   Kinetic Energy = " << fKineticEnergy << " [MeV]\n";
+  std::cout << "      Region Mask = 0x" << std::hex << fRegionMask << std::dec << "\n";
   std::cout << std::endl;
 }

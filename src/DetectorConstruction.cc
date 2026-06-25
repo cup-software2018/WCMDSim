@@ -268,6 +268,8 @@ G4VPhysicalVolume * DetectorConstruction::Construct()
   const G4ThreeVector roomPosWaterT = roomPosT - G4ThreeVector(0, 0, waterZOffset);
   const G4ThreeVector doorPosWaterT = doorPosT - G4ThreeVector(0, 0, waterZOffset);
 
+  fWaterRegionBounds = {2513. * mm, 2513. * mm, roomPosWaterT.z() + 1083. * mm};
+
   auto sWater1 = new G4SubtractionSolid("s_Water1", sWaterCav, sRoomO, nullptr, roomPosWaterT);
   auto sWater = new G4SubtractionSolid("s_Water", sWater1, sDoor, nullptr, doorPosWaterT);
 

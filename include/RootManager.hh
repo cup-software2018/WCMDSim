@@ -40,6 +40,17 @@ public:
     kStepOptical  = 1 << 3,  // record steps for optical photons
   };
 
+  // Bit flags for water region tagging (stored in MCTrack::fRegionMask).
+  enum MuonRegion : G4int {
+    kRegNone    = 0,
+    kRegCeiling = 1 << 0,  // water above the inner room (top)
+    kRegWallPX  = 1 << 1,  // +X side wall water
+    kRegWallMX  = 1 << 2,  // -X side wall water
+    kRegWallPY  = 1 << 3,  // +Y side wall water
+    kRegWallMY  = 1 << 4,  // -Y side wall water
+    kRegDoor    = 1 << 5,  // door water volume
+  };
+
   RootManager();
   virtual ~RootManager();
 
@@ -51,6 +62,7 @@ public:
   virtual void EndOfEvent(const G4Event *);
   virtual void RecordTrack(const G4Track *);
   virtual void RecordStep(const G4Step *, const G4VProcess *);
+  void AddRegion(G4int trackId, G4int regionBit);
 
   void SetRootFilename(const char * fname) { fRootFilename = fname; }
   void OpenRootFile();

@@ -25,6 +25,8 @@ public:
   void SetGlobalTime(double time);
   void SetLocalTime(double time);
   void SetProcessName(const char * name);
+  void SetRegionMask(int mask);
+  void AddRegion(int bit);
 
   std::string GetParticleName() const;
   int GetPDGCode() const;
@@ -36,6 +38,7 @@ public:
   double GetGlobalTime() const;
   double GetLocalTime() const;
   std::string GetProcessName() const;
+  int GetRegionMask() const;
 
   MCStep * AddStep();
   int GetNStep() const;
@@ -54,11 +57,13 @@ private:
   double fGlobalTime = 0;
   double fLocalTime = 0;
 
+  int fRegionMask = 0;
+
   std::string fParticleName;
   std::string fProcessName;
   std::vector<MCStep> fSteps;
 
-  ClassDefOverride(MCTrack, 4)
+  ClassDefOverride(MCTrack, 5)
 };
 
 inline void MCTrack::SetParticleName(const char * name) { fParticleName = name; }
@@ -120,6 +125,10 @@ inline double MCTrack::GetGlobalTime() const { return fGlobalTime; }
 inline double MCTrack::GetLocalTime() const { return fLocalTime; }
 
 inline std::string MCTrack::GetProcessName() const { return fProcessName; }
+
+inline void MCTrack::SetRegionMask(int mask) { fRegionMask = mask; }
+inline void MCTrack::AddRegion(int bit) { fRegionMask |= bit; }
+inline int  MCTrack::GetRegionMask() const { return fRegionMask; }
 
 inline int MCTrack::GetNStep() const { return (int)fSteps.size(); }
 

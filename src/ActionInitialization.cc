@@ -1,9 +1,12 @@
 #include "ActionInitialization.hh"
+#include "DetectorConstruction.hh"
 #include "EventAction.hh"
 #include "PrimaryGeneratorAction.hh"
 #include "RunAction.hh"
 #include "SteppingAction.hh"
 #include "TrackingAction.hh"
+
+#include "G4RunManager.hh"
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
@@ -34,8 +37,10 @@ void ActionInitialization::Build() const
 
   auto * eventAction = new EventAction(fRootManager);
   SetUserAction(eventAction);
+  const auto * detCon = static_cast<const DetectorConstruction *>(
+    G4RunManager::GetRunManager()->GetUserDetectorConstruction());
   SetUserAction(new TrackingAction(fRootManager));
-  SetUserAction(new SteppingAction(fRootManager));
+  SetUserAction(new SteppingAction(fRootManager, detCon));
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

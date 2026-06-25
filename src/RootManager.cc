@@ -266,6 +266,12 @@ void RootManager::CloseRootFile()
   fRootFile = NULL;
 }
 
+void RootManager::AddRegion(G4int trackId, G4int regionBit)
+{
+  MCTrack * track = fTrackData->FindTrack(trackId);
+  if (track) track->AddRegion(regionBit);
+}
+
 void RootManager::Booking()
 {
   fEventInfo = new MCEventInfo();
