@@ -172,114 +172,34 @@ G4VPhysicalVolume * DetectorConstruction::Construct()
   DefineMaterials();
   DefineOpticalSurfaces();
 
-  auto air = G4Material::GetMaterial("G4_AIR");
-  auto steel = G4Material::GetMaterial("G4_STAINLESS-STEEL");
-  auto water = G4Material::GetMaterial("G4_WATER");
-  auto vacuum = G4Material::GetMaterial("G4_Galactic");
-  auto glass = G4Material::GetMaterial("G4_Pyrex_Glass");
+  auto air      = G4Material::GetMaterial("G4_AIR");
+  auto steel    = G4Material::GetMaterial("G4_STAINLESS-STEEL");
+  auto water    = G4Material::GetMaterial("G4_WATER");
+  auto vacuum   = G4Material::GetMaterial("G4_Galactic");
+  auto glass    = G4Material::GetMaterial("G4_Pyrex_Glass");
   auto aluminum = G4Material::GetMaterial("G4_Al");
 
-  // ---- World : hemisphere (flat at z=0, dome in +Z) ----
-  auto worldOrb = new G4Orb("World_orb", 10000. * mm);
-  auto worldHalf = new G4Box("World_half", 20000. * mm, 20000. * mm, 5000. * mm);
-  auto solidWorld = new G4IntersectionSolid("World", worldOrb, worldHalf, nullptr,
-                                            G4ThreeVector(0., 0., 5000. * mm));
-  auto logicWorld = new G4LogicalVolume(solidWorld, air, "World");
-  auto physWorld =
-      new G4PVPlacement(nullptr, G4ThreeVector(), logicWorld, "World", nullptr, false, 0, true);
-
-  // Flat floor at z=0; tank base at z=4000 mm → tank centre z=5571 mm.
-  const G4ThreeVector tankPos(0., 0., 5571. * mm);
-
-  // ---- primitive solids (half-sizes, mm) ----
+  // ---- shared dimensions ----
   // Z is vertical.  Door on +Y face, at -X corner.
-  auto sOuter = new G4Box("s_TankOuter", 3205. * mm, 3205. * mm, 1571. * mm);
-  auto sCav = new G4Box("s_TankCav", 3197. * mm, 3197. * mm, 1563. * mm);
-  auto sDoor = new G4Box("s_DoorBox", 877.5 * mm, 350. * mm, 1571. * mm);
+  // waterZHalf fixed; waterZOffset computed after PMT LV is built.
+  const G4double waterZHalf = 1433. * mm;
+  const G4double cavHH      = 1563. * mm; // sCav Z half
+  const G4double pmtTopGap  = 1. * mm;
+
+  // ---- shared primitive solids (reused across multiple volume definitions) ----
+  auto sCav   = new G4Box("s_TankCav",   3197. * mm, 3197. * mm, cavHH);
+  auto sDoor  = new G4Box("s_DoorBox",    877.5 * mm,  350. * mm, 1571. * mm);
   auto sRoomO = new G4Box("s_RoomOuter", 2513. * mm, 2513. * mm, 1083. * mm);
   auto sRoomI = new G4Box("s_RoomInner", 2505. * mm, 2505. * mm, 1075. * mm);
-  auto sDoorI = new G4Box("s_DoorInner", 869.5 * mm, 342. * mm, 1563. * mm);
 
-  // Water half-height: cavity base at world Z=4008 mm, top determined by PMT gap below.
-  // waterZHalf fixed at 1433 mm; waterZOffset computed after PMT LV is built.
-  const G4double waterZHalf = 1433. * mm;
-  auto sWaterCav = new G4Box("s_WaterCav", 3197. * mm, 3197. * mm, waterZHalf);
-  auto sDoorWaterS = new G4Box("s_DoorWaterS", 869.5 * mm, 342. * mm, waterZHalf);
-
-  // ---- key positions ----
-  // All "T" positions are in TankAir (≡ tank-centre) local frame.
-  const G4ThreeVector doorPosT(-2327.5 * mm, 2855. * mm, 0. * mm);      // door, tank frame
-  const G4ThreeVector roomPosT(0. * mm, 0. * mm, -480. * mm);           // room, tank frame
-  const G4ThreeVector doorPosW(-2327.5 * mm, 2855. * mm, 5571. * mm);   // door, world
-  const G4ThreeVector roomPosW(0. * mm, 0. * mm, 5091. * mm);           // room, world
+  // ---- key positions (in TankAir local frame unless noted) ----
+  const G4ThreeVector tankPos(0., 0., 5571. * mm);                      // tank centre, world
+  const G4ThreeVector roomPosT(0., 0., -480. * mm);                     // room centre, TankAir
+  const G4ThreeVector doorPosT(-2327.5 * mm, 2855. * mm, 0. * mm);     // door centre, TankAir
+  const G4ThreeVector doorPosW(-2327.5 * mm, 2855. * mm, 5571. * mm);  // door centre, world
   const G4ThreeVector doorPosRoom(-2327.5 * mm, 2855. * mm, 480. * mm); // door rel. to room
 
-  // ---- 1) tank steel shell ----
-  auto sShell1 = new G4SubtractionSolid("s_Shell1", sOuter, sCav);
-  auto sShell = new G4SubtractionSolid("s_Shell", sShell1, sDoor, nullptr, doorPosT);
-  auto lvShell = new G4LogicalVolume(sShell, steel, "TankSteel");
-  new G4PVPlacement(nullptr, tankPos, lvShell, "TankSteel", logicWorld, false, 0, true);
-
-  // ---- 2) water solid built after pmtLog (waterZOffset depends on PMT parameters) ----
-
-  // ---- 3) inner room liner ----
-  auto sRoomShell1 = new G4SubtractionSolid("s_RoomShell1", sRoomO, sRoomI);
-  auto sRoomShell = new G4SubtractionSolid("s_RoomShell", sRoomShell1, sDoor, nullptr, doorPosRoom);
-  auto lvRoomSteel = new G4LogicalVolume(sRoomShell, steel, "RoomSteel");
-
-  // ---- 4) room interior ----
-  auto lvRoomAir = new G4LogicalVolume(sRoomI, air, "RoomAir");
-
-  // ---- 5) door steel shell ----
-  auto sDoorShell = new G4SubtractionSolid("s_DoorShell", sDoor, sDoorI);
-  auto lvDoorSteel = new G4LogicalVolume(sDoorShell, steel, "DoorSteel");
-  // DoorSteel extends 8 mm outside sCav (through the wall), so it stays in world.
-  new G4PVPlacement(nullptr, doorPosW, lvDoorSteel, "DoorSteel", logicWorld, false, 0, true);
-
-  // ---- PMT logical volume ----
-  auto sdMan = G4SDManager::GetSDMpointer();
-  auto pmtSD = new PMTSD("/WCMD/PMTSD");
-  sdMan->AddNewDetector(pmtSD);
-
-  // ExteriorMat = water so the photocathode-region boundary is water→glass (no air gap).
-  auto pmtLog = new PMT10inchLogicalVolume("PMT", water, glass, fPhotocathodeSurface, vacuum,
-                                           aluminum, nullptr, pmtSD);
-
-  // PMT bounding cylinder parameters
-  auto pmtTubs = (G4Tubs *)pmtLog->GetSolid();
-  const G4double pmtHH = pmtTubs->GetZHalfLength(); // 165 mm
-  const G4double pmtR = pmtTubs->GetOuterRadius();  // 126.5 mm
-  const G4double zEq = pmtLog->GetZEquator();       // ≈ 68.3 mm
-
-  // Depth of photocathode below the water surface (= below the equator plane).
-  // After rotateX(180°): PMT local +Z → world -Z, so photocathode apex is
-  // pmtHH - zEq ≈ 96.7 mm below the water surface.
-  const G4double photocathodeDepth = pmtHH - zEq;
-  const G4double holeHH = photocathodeDepth; // exact: hole bottom = PMT cylinder bottom
-  const G4double holeR = pmtR + 0.1 * mm;    // 0.1 mm tolerance
-
-  // ---- 2) water solid ----
-  // Place water so PMT base (top of rotated bounding cylinder) is 1 mm below tank ceiling.
-  // Condition: waterZOffset + waterZHalf + zEq + pmtHH = cavHH - pmtTopGap
-  const G4double cavHH = 1563. * mm; // sCav Z half
-  const G4double pmtTopGap = 1. * mm;
-  const G4double waterZOffset = cavHH - pmtTopGap - waterZHalf - zEq - pmtHH;
-
-  const G4ThreeVector roomPosWaterT = roomPosT - G4ThreeVector(0, 0, waterZOffset);
-  const G4ThreeVector doorPosWaterT = doorPosT - G4ThreeVector(0, 0, waterZOffset);
-
-  fWaterRegionBounds = {2513. * mm, 2513. * mm, roomPosWaterT.z() + 1083. * mm};
-
-  auto sWater1 = new G4SubtractionSolid("s_Water1", sWaterCav, sRoomO, nullptr, roomPosWaterT);
-  auto sWater = new G4SubtractionSolid("s_Water", sWater1, sDoor, nullptr, doorPosWaterT);
-
-  // ---- PMT hole union (48 cylinders) for subtraction from TankWater ----
-  // Hole centres are at the top face of the WaterCav solid (z = +waterZHalf).
-  auto pmtHoleTube = new G4Tubs("PMThole", 0., holeR, holeHH, 0., CLHEP::twopi);
-  auto allHoles = new G4MultiUnion("AllPMTHoles");
-  G4RotationMatrix noRot;
-
-  // 48 PMT (x,y) positions in tank/TankAir frame (mm)
+  // 48 PMT (x,y) positions in TankAir frame (mm)
   G4double pmtXY[48][2] = {
       {2850, -2850},  {1900, -2850},  {950, -2850},  {0, -2850},   {-950, -2850}, {-1900, -2850},
       {-2850, -2850}, {2850, -1900},  {1900, -1900}, {950, -1900}, {0, -1900},    {-950, -1900},
@@ -290,78 +210,154 @@ G4VPhysicalVolume * DetectorConstruction::Construct()
       {1900, 1900},   {950, 1900},    {0, 1900},     {-950, 1900}, {-1900, 1900}, {-2850, 1900},
       {2850, 2850},   {1900, 2850},   {950, 2850},   {0, 2850},    {-950, 2850},  {-2328, 2850}};
 
+  // ================================================================
+  // World : hemisphere (flat at z=0, dome up)
+  // ================================================================
+  auto worldOrb   = new G4Orb("World_orb",  10000. * mm);
+  auto worldHalf  = new G4Box("World_half", 20000. * mm, 20000. * mm, 5000. * mm);
+  auto solidWorld = new G4IntersectionSolid("World", worldOrb, worldHalf, nullptr,
+                                            G4ThreeVector(0., 0., 5000. * mm));
+  auto logicWorld = new G4LogicalVolume(solidWorld, air, "World");
+  auto physWorld  = new G4PVPlacement(nullptr, G4ThreeVector(), logicWorld, "World",
+                                      nullptr, false, 0, true);
+
+  // ================================================================
+  // TankSteel : outer shell minus cavity and door cutout
+  // ================================================================
+  auto sOuter  = new G4Box("s_TankOuter", 3205. * mm, 3205. * mm, 1571. * mm);
+  auto sShell1 = new G4SubtractionSolid("s_Shell1", sOuter, sCav);
+  auto sShell  = new G4SubtractionSolid("s_Shell",  sShell1, sDoor, nullptr, doorPosT);
+  auto lvShell = new G4LogicalVolume(sShell, steel, "TankSteel");
+  new G4PVPlacement(nullptr, tankPos, lvShell, "TankSteel", logicWorld, false, 0, true);
+
+  // ================================================================
+  // DoorSteel : door outer shell minus inner cutout
+  // (extends 8 mm through the tank wall → placed in World, not TankAir)
+  // ================================================================
+  auto sDoorI      = new G4Box("s_DoorInner",  869.5 * mm, 342. * mm, 1563. * mm);
+  auto sDoorShell  = new G4SubtractionSolid("s_DoorShell", sDoor, sDoorI);
+  auto lvDoorSteel = new G4LogicalVolume(sDoorShell, steel, "DoorSteel");
+  new G4PVPlacement(nullptr, doorPosW, lvDoorSteel, "DoorSteel", logicWorld, false, 0, true);
+
+  // ================================================================
+  // TankAir : full cavity — common mother for all internal volumes
+  // ================================================================
+  auto lvTankAir = new G4LogicalVolume(sCav, air, "TankAir");
+  new G4PVPlacement(nullptr, tankPos, lvTankAir, "TankAir", logicWorld, false, 0, true);
+
+  // ================================================================
+  // PMT logical volume
+  // Must be built before TankWater because waterZOffset depends on PMT dimensions.
+  // ================================================================
+  auto sdMan = G4SDManager::GetSDMpointer();
+  auto pmtSD = new PMTSD("/WCMD/PMTSD");
+  sdMan->AddNewDetector(pmtSD);
+
+  // ExteriorMat = water so the photocathode boundary is water→glass (no air gap).
+  auto pmtLog  = new PMT10inchLogicalVolume("PMT", water, glass, fPhotocathodeSurface,
+                                            vacuum, aluminum, nullptr, pmtSD);
+  auto pmtTubs = (G4Tubs *)pmtLog->GetSolid();
+  const G4double pmtHH = pmtTubs->GetZHalfLength(); // 165 mm
+  const G4double pmtR  = pmtTubs->GetOuterRadius();  // 126.5 mm
+  const G4double zEq   = pmtLog->GetZEquator();      // ≈ 68.3 mm
+
+  // After rotateX(180°): PMT local +Z → world -Z; photocathode apex sits
+  // (pmtHH − zEq) ≈ 96.7 mm below the water surface.
+  const G4double holeHH = pmtHH - zEq;    // hole depth = photocathode depth
+  const G4double holeR  = pmtR + 0.1 * mm; // 0.1 mm tolerance
+
+  // waterZOffset: places the water top face 1 mm below the tank ceiling.
+  // Condition: waterZOffset + waterZHalf + zEq + pmtHH = cavHH − pmtTopGap
+  const G4double waterZOffset = cavHH - pmtTopGap - waterZHalf - zEq - pmtHH;
+
+  const G4ThreeVector roomPosWaterT = roomPosT - G4ThreeVector(0, 0, waterZOffset);
+  const G4ThreeVector doorPosWaterT = doorPosT - G4ThreeVector(0, 0, waterZOffset);
+
+  fWaterRegionBounds = {2513. * mm, 2513. * mm, roomPosWaterT.z() + 1083. * mm};
+
+  // ================================================================
+  // TankWater : water with room, door, and PMT holes subtracted
+  // ================================================================
+  auto pmtHoleTube = new G4Tubs("PMThole", 0., holeR, holeHH, 0., CLHEP::twopi);
+  auto allHoles    = new G4MultiUnion("AllPMTHoles");
+  G4RotationMatrix noRot;
   for (int i = 0; i < 48; i++) {
-    // Hole centre in WaterCav solid local frame: (pmtX, pmtY, +waterZHalf)
-    // The XY offsets of WaterCav and TankAir are identical (both centred at tankPos XY).
+    // Hole centres at the top face of the WaterCav solid (z = +waterZHalf)
     G4Transform3D tr(noRot, G4ThreeVector(pmtXY[i][0] * mm, pmtXY[i][1] * mm, waterZHalf));
     allHoles->AddNode(*pmtHoleTube, tr);
   }
   allHoles->Voxelize();
 
-  // Final water solid with PMT holes
-  auto sWaterFinal = new G4SubtractionSolid("s_WaterFinal", sWater, allHoles);
-  auto lvWater = new G4LogicalVolume(sWaterFinal, water, "TankWater");
-  fScoringVolume = lvWater;
+  auto sWaterCav   = new G4Box("s_WaterCav", 3197. * mm, 3197. * mm, waterZHalf);
+  auto sWater1     = new G4SubtractionSolid("s_Water1",     sWaterCav, sRoomO,   nullptr, roomPosWaterT);
+  auto sWater      = new G4SubtractionSolid("s_Water",      sWater1,   sDoor,    nullptr, doorPosWaterT);
+  auto sWaterFinal = new G4SubtractionSolid("s_WaterFinal", sWater,    allHoles);
+  auto lvWater     = new G4LogicalVolume(sWaterFinal, water, "TankWater");
+  fScoringVolume   = lvWater;
+  auto physWater   = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, waterZOffset),
+                                       lvWater, "TankWater", lvTankAir, false, 0, true);
 
-  // ---- DoorWater solid with hole for PMT #47 ----
-  // PMT #47 position in DoorWater solid local = pmt_world_XY - door_world_XY
-  G4double dw_lx = pmtXY[47][0] * mm - doorPosT.x(); // -2328 - (-2327.5) = -0.5 mm
-  G4double dw_ly = pmtXY[47][1] * mm - doorPosT.y(); //  2850 -   2855    = -5.0 mm
-  auto doorPMTHole = new G4Tubs("DoorPMThole", 0., holeR, holeHH, 0., CLHEP::twopi);
+  // ================================================================
+  // DoorWater : water inside the door with PMT #47 hole subtracted
+  // ================================================================
+  const G4double dw_lx = pmtXY[47][0] * mm - doorPosT.x(); // −2328 − (−2327.5) = −0.5 mm
+  const G4double dw_ly = pmtXY[47][1] * mm - doorPosT.y(); //  2850 −  2855     = −5.0 mm
+  auto sDoorWaterS     = new G4Box("s_DoorWaterS", 869.5 * mm, 342. * mm, waterZHalf);
+  auto doorPMTHole     = new G4Tubs("DoorPMThole", 0., holeR, holeHH, 0., CLHEP::twopi);
   auto sDoorWaterFinal = new G4SubtractionSolid("s_DoorWaterFinal", sDoorWaterS, doorPMTHole,
                                                 nullptr, G4ThreeVector(dw_lx, dw_ly, waterZHalf));
   auto lvDoorWater = new G4LogicalVolume(sDoorWaterFinal, water, "DoorWater");
+  new G4PVPlacement(nullptr, G4ThreeVector(doorPosT.x(), doorPosT.y(), waterZOffset),
+                    lvDoorWater, "DoorWater", lvTankAir, false, 0, true);
 
-  // ---- TankAir : full cavity (sCav box), air — common mother for water + PMTs ----
-  // sCav is reused as the TankAir solid (also used in sShell subtraction above).
-  auto lvTankAir = new G4LogicalVolume(sCav, air, "TankAir");
-  new G4PVPlacement(nullptr, tankPos, lvTankAir, "TankAir", logicWorld, false, 0, true);
-
-  // ---- placements inside TankAir ----
-  // Water sits at (0, 0, waterZOffset) so its top face is at the air–water interface.
-  auto physWater = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, waterZOffset), lvWater,
-                                     "TankWater", lvTankAir, false, 0, true);
-
-  // Room liner and interior
+  // ================================================================
+  // RoomSteel : liner shell around the inner room (with door cutout)
+  // ================================================================
+  auto sRoomShell1 = new G4SubtractionSolid("s_RoomShell1", sRoomO, sRoomI);
+  auto sRoomShell  = new G4SubtractionSolid("s_RoomShell",  sRoomShell1, sDoor, nullptr, doorPosRoom);
+  auto lvRoomSteel = new G4LogicalVolume(sRoomShell, steel, "RoomSteel");
   new G4PVPlacement(nullptr, roomPosT, lvRoomSteel, "RoomSteel", lvTankAir, false, 0, true);
+
+  // ================================================================
+  // RoomAir : interior of the inner room
+  // ================================================================
+  auto lvRoomAir = new G4LogicalVolume(sRoomI, air, "RoomAir");
   new G4PVPlacement(nullptr, roomPosT, lvRoomAir, "RoomAir", lvTankAir, false, 0, true);
 
-  // Door water column (fits exactly within TankAir XY bounds)
-  new G4PVPlacement(nullptr, G4ThreeVector(doorPosT.x(), doorPosT.y(), waterZOffset), lvDoorWater,
-                    "DoorWater", lvTankAir, false, 0, true);
-
-  // ---- PMT placements inside TankAir ----
-  // After rotateX(180°), PMT local +Z → world -Z (photocathode faces down).
-  // Place PMT centre so the equator (PMT local +zEq → world -zEq from centre)
-  // lands exactly at the water surface (TankAir local z = waterZOffset + waterZHalf).
+  // ================================================================
+  // PMT placements inside TankAir (×48)
+  // After rotateX(180°): PMT local +Z → world −Z (photocathode faces down).
+  // PMT centre placed so its equator lands at the water surface.
+  // ================================================================
   auto rotPMT = new G4RotationMatrix();
   rotPMT->rotateX(180. * deg);
-
   const G4double pmtCentreZ = waterZOffset + waterZHalf + zEq; // in TankAir local
 
   char PMTname[64];
   for (int i = 0; i < 48; i++) {
     sprintf(PMTname, "PMTPhys%d", i);
-    auto physPMT =
-        new G4PVPlacement(rotPMT, G4ThreeVector(pmtXY[i][0] * mm, pmtXY[i][1] * mm, pmtCentreZ),
-                          pmtLog, PMTname, lvTankAir, false, i, true);
+    auto physPMT = new G4PVPlacement(
+        rotPMT, G4ThreeVector(pmtXY[i][0] * mm, pmtXY[i][1] * mm, pmtCentreZ),
+        pmtLog, PMTname, lvTankAir, false, i, true);
     new G4LogicalBorderSurface("WaterPMT_" + std::to_string(i), physWater, physPMT,
                                fWaterPMTSurface);
   }
 
-  // ---- Tyvek reflector skin ----
-  // Water volumes: XY walls, bottom, and top (non-PMT area).
-  new G4LogicalSkinSurface("TyvekSkinMain", lvWater, fTyvekSurface);
+  // ================================================================
+  // Optical surfaces
+  // ================================================================
+  new G4LogicalSkinSurface("TyvekSkinMain", lvWater,    fTyvekSurface);
   new G4LogicalSkinSurface("TyvekSkinDoor", lvDoorWater, fTyvekSurface);
-  // TankAir: steel walls and ceiling above the water line.
-  new G4LogicalSkinSurface("TyvekSkinAir", lvTankAir, fTyvekSurface);
+  new G4LogicalSkinSurface("TyvekSkinAir",  lvTankAir,  fTyvekSurface);
 
-  // ---- visualisation ----
+  // ================================================================
+  // Visualisation
+  // ================================================================
   auto vaSteel = new G4VisAttributes(G4Colour(0.68, 0.72, 0.77, 0.30));
   auto vaWater = new G4VisAttributes(G4Colour(0.18, 0.62, 0.84, 0.35));
   auto vaDoorS = new G4VisAttributes(G4Colour(0.79, 0.59, 0.18, 0.45));
-  auto vaRoom = new G4VisAttributes(G4Colour(0.20, 0.27, 0.35, 0.20));
-  auto vaAir = new G4VisAttributes(G4Colour(0.90, 0.90, 0.90, 0.05));
+  auto vaRoom  = new G4VisAttributes(G4Colour(0.20, 0.27, 0.35, 0.20));
+  auto vaAir   = new G4VisAttributes(G4Colour(0.90, 0.90, 0.90, 0.05));
   vaSteel->SetForceSolid(true);
   vaWater->SetForceSolid(true);
   vaDoorS->SetForceSolid(true);
