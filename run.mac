@@ -1,0 +1,60 @@
+# Batch run macro for cosmic muon simulation
+# Usage: ./WCMDSim run.mac [input.root] [output.root]
+
+/run/initialize
+
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# ---------------------------------------------------------------------------
+# RootManager options
+# ---------------------------------------------------------------------------
+#
+# /ROOT/savetrackopt <int>  — bit flags (OR together) for which tracks to save
+#
+#   0   kSaveNone     save nothing (default)
+#   1   kSaveHeavy    muons, hadrons, ions   (not e±, not optical photons)
+#   2   kSaveElec     e± NOT from EM-shower processes
+#   4   kSaveEMShower e± from compt/phot/conv/annihil/Ioni/Brem
+#   8   kSaveOptical  optical photons
+#
+#   Examples:
+#     /ROOT/savetrackopt 1    → muons only
+#     /ROOT/savetrackopt 3    → muons + primary e±   (1+2)
+#     /ROOT/savetrackopt 7    → muons + all e±        (1+2+4)
+#     /ROOT/savetrackopt 15   → everything            (1+2+4+8)
+#
+/ROOT/savetrackopt 1
+
+# /ROOT/savestepopt <int>  — bit flags for which track types get step-level info saved
+#
+#   Same bit positions as savetrackopt.
+#   NOTE: steps are stored inside the MCTrack object, so a step is saved only
+#   when BOTH conditions hold:
+#     (a) the track type bit is set in savetrackopt  (MCTrack exists)
+#     (b) the track type bit is set in savestepopt
+#   Effective step set = savetrackopt & savestepopt.
+#
+#   0   kStepNone     save no steps (default)
+#   1   kStepHeavy    muons, hadrons, ions
+#   2   kStepElec     e± NOT from EM-shower processes
+#   4   kStepEMShower e± from compt/phot/conv/annihil/Ioni/Brem
+#   8   kStepOptical  optical photons  (WARNING: enormous output)
+#
+#   Examples:
+#     /ROOT/savestepopt 1    → muon/hadron steps only  ← typical choice
+#     /ROOT/savestepopt 3    → muon + non-shower e± steps (needs savetrackopt ≥ 3)
+#     /ROOT/savestepopt 7    → muon + all e± steps        (needs savetrackopt ≥ 7)
+#
+/ROOT/savestepopt 1
+
+# /ROOT/savehitphoton <int>  — per-PMT optical photon hit detail
+#   0   off — save only PMT hit count per event (default)
+#   1   on  — save individual photon hit info (time, position, ...) per PMT
+#
+/ROOT/savehitphoton 1
+
+# ---------------------------------------------------------------------------
+
+/run/beamOn 10000
