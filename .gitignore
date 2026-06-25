@@ -21,6 +21,7 @@ setup_wcmdsim.sh
 
 # Simulation output
 muon_output.root
+test.root
 
 # Editor / tool caches
 .cache/

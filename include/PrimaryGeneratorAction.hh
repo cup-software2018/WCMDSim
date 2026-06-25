@@ -1,27 +1,25 @@
 #ifndef B1PrimaryGeneratorAction_h
 #define B1PrimaryGeneratorAction_h 1
 
+#include <vector>
+
 #include "G4VUserPrimaryGeneratorAction.hh"
 #include "G4ParticleGun.hh"
 #include "G4String.hh"
 #include "G4Types.hh"
 
 class G4Event;
-class TH1D;
-class TH2D;
-class TFile;
+class TH3D;
 
 /// Generates cosmic muons from ROOT input distributions.
 ///
 /// Input ROOT file must contain:
-///   hEnergy  : kinetic energy [GeV]             (TH1D)
-///   hAngular : zenith theta [deg] vs azimuth phi [deg]  (TH2D, x=theta, y=phi)
+///   h_flux : TH3D — x: kinetic energy [GeV], y: zenith theta [deg], z: azimuth phi [deg]
 ///
 /// Each event:
-///   1. Sample (theta, phi) from hAngular and energy from hEnergy
+///   1. Sample (energy, theta, phi) from h_flux
 ///   2. Sample a random foot point (x0, y0) uniformly on z=0 disk of radius R
 ///   3. Back-trace along the muon direction to the hemisphere surface -> start position
-///   This ensures muons with the same (theta,phi) can hit any part of the detector array.
 
 class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 {
@@ -34,12 +32,15 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
     const G4ParticleGun* GetParticleGun() const { return fParticleGun; }
 
   private:
-    static G4double SampleTH1D(const TH1D* h);
-    static void     SampleTH2D(const TH2D* h, G4double& x, G4double& y);
+    void BuildCDF();
+    void SampleTH3D(G4double & energy, G4double & theta, G4double & phi) const;
 
-    G4ParticleGun* fParticleGun  = nullptr;
-    TH1D*          fHistEnergy   = nullptr;  // energy [GeV]
-    TH2D*          fHistAngular  = nullptr;  // x: theta [deg], y: phi [deg]
+    G4ParticleGun *       fParticleGun = nullptr;
+    TH3D *                fHistFlux    = nullptr;  // x: energy [GeV], y: theta [deg], z: phi [deg]
+
+    std::vector<G4double> fCDF;     // normalised cumulative bin sums, size = nx*ny*nz + 1
+    G4int                 fNBinsY  = 0;
+    G4int                 fNBinsZ  = 0;
 
     G4double fWorldRadius = 0.;
 };

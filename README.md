@@ -86,6 +86,52 @@ Example — muon tracks + all e± tracks, but steps only for muons:
 /ROOT/savestepopt  1
 ```
 
+### Muon region mask (`MCTrack::GetRegionMask()`)
+
+Each muon track carries a bitmask recording which water sub-regions it traversed.
+The mask is stored in `MCTrack::fRegionMask` and is the OR of all region bits hit during tracking.
+
+Geometry reference (top-down XY view, +X up, +Y left):
+
+```
+              +X
+               ▲
+         ┌─────┴──────────────────┬──┐
+         │       Region 3 (+X)    │  │
+         ├──────┬─────────────────┤  │
+ Reg 4   │      │                 │  │ Reg 2
+ (+Y) ───┤      │   Inner Room    │  ├─── (-Y)
+         │      │   (empty)       │  │
+         ├──────┴─────────────────┤  │
+         │       Region 1 (-X)    │  │
+         └────────────────────────┴──┘
+  Door (separate volume, +Y side near -X corner)
+```
+
+| Bit | Hex  | Name        | Region | Description |
+|-----|------|-------------|--------|-------------|
+| 0   | 0x01 | kRegCeiling | —      | Water above the inner room top face |
+| 1   | 0x02 | kRegWallPX  | 3      | +X side wall water |
+| 2   | 0x04 | kRegWallMX  | 1      | −X side wall water |
+| 3   | 0x08 | kRegWallPY  | 4      | +Y side wall water |
+| 4   | 0x10 | kRegWallMY  | 2      | −Y side wall water |
+| 5   | 0x20 | kRegDoor    | —      | Door water volume (separate LV) |
+
+Wall regions cover only the face strip directly opposite each room wall face (±2513 mm in X or Y).
+Corner areas (|x| > 2513 and |y| > 2513 simultaneously) are left untagged (mask = 0).
+Regions 1–4 all have equal area: 2 × 2513 mm × 684 mm.
+
+```cpp
+// Example: select muons that passed through the -X wall (region 1)
+if (track->GetRegionMask() & 0x04) { ... }
+
+// Select muons that passed through ANY wall (not ceiling, not door)
+if (track->GetRegionMask() & 0x1E) { ... }
+
+// Select muons that passed through the door
+if (track->GetRegionMask() & 0x20) { ... }
+```
+
 ### PMT hit detail (`/ROOT/savehitphoton`)
 
 ```
