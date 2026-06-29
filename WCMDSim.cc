@@ -59,20 +59,19 @@ int main(int argc, char ** argv)
 
   runManager->SetUserInitialization(new ActionInitialization(inputFile, outputFile));
 
-  auto * visManager = new G4VisExecutive;
-  visManager->Initialize();
-
   auto * UImanager = G4UImanager::GetUIpointer();
 
   if (ui) {
+    auto * visManager = new G4VisExecutive;
+    visManager->Initialize();
     UImanager->ApplyCommand("/control/execute vis.mac");
     ui->SessionStart();
     delete ui;
+    delete visManager;
   }
   else {
     UImanager->ApplyCommand("/control/execute " + macroFile);
   }
 
-  delete visManager;
   delete runManager;
 }

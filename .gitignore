@@ -31,6 +31,7 @@ test.root
 *.swp
 *~
 *.C
+*.png
 
 # Local style/format config (not shared)
 .clang-format

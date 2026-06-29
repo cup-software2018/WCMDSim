@@ -2,7 +2,7 @@
 # Source this script to set up the WCMDSim environment:
 #   source setup_wcmdsim.sh
 
-WCMDSIM_PREFIX="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WCMDSIM_PREFIX="$(builtin cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 export PATH="${WCMDSIM_PREFIX}/@CMAKE_INSTALL_BINDIR@:${PATH}"
 export LD_LIBRARY_PATH="${WCMDSIM_PREFIX}/@CMAKE_INSTALL_LIBDIR@:${LD_LIBRARY_PATH}"

@@ -72,8 +72,8 @@ void PrimaryGeneratorAction::BuildCDF()
   G4int k = 0;
   for (G4int ix = 1; ix <= nx; ix++)
     for (G4int iy = 1; iy <= ny; iy++)
-      for (G4int iz = 1; iz <= nz; iz++)
-        fCDF[k + 1] = fCDF[k++] + fHistFlux->GetBinContent(ix, iy, iz);
+      for (G4int iz = 1; iz <= nz; iz++, ++k)
+        fCDF[k + 1] = fCDF[k] + fHistFlux->GetBinContent(ix, iy, iz);
 
   const G4double total = fCDF[nbins];
   for (auto & v : fCDF) v /= total;

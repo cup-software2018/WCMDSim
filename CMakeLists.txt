@@ -35,16 +35,6 @@ file ( GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cc )
 file ( GLOB headers ${PROJECT_SOURCE_DIR}/include/*.hh )
 
 # ----------------------------------------------------------------------------
-# Generate ROOT Dictionary
-#
-ROOT_GENERATE_DICTIONARY ( WCMDSimDict
-  MCEventInfo.hh MCPhotonHit.hh MCPMT.hh MCPMTData.hh MCPrimary.hh MCPrimaryData.hh
-  MCStep.hh MCTrack.hh MCTrackData.hh PMTHit.hh
-  LINKDEF include/LinkDef.h
-  OPTIONS -I${Geant4_INCLUDE_DIRS} -I${PROJECT_SOURCE_DIR}/include
-)
-
-# ----------------------------------------------------------------------------
 # Standalone data library — loadable from ROOT macros without Geant4
 #
 set ( data_sources
@@ -73,9 +63,9 @@ target_link_libraries ( WCMDSimData ROOT::Core ROOT::RIO ROOT::Tree )
 # ----------------------------------------------------------------------------
 # Executable
 #
-add_executable ( WCMDSim WCMDSim.cc WCMDSimDict.cxx ${sources} )
+add_executable ( WCMDSim WCMDSim.cc ${sources} )
 target_include_directories ( WCMDSim PRIVATE ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR} )
-target_link_libraries ( WCMDSim ${Geant4_LIBRARIES} ROOT::Core ROOT::Hist ROOT::RIO ROOT::Tree )
+target_link_libraries ( WCMDSim ${Geant4_LIBRARIES} ROOT::Core ROOT::Hist ROOT::RIO ROOT::Tree WCMDSimData )
 
 # ----------------------------------------------------------------------------
 # Install

@@ -130,6 +130,7 @@ void RootManager::EndOfEvent(const G4Event * anEvent)
       prim->SetKineticEnergy(ptl->GetKineticEnergy());
       prim->SetTrackId(ptl->GetTrackID());
       prim->SetParticleName(ptl->GetG4code()->GetParticleName().c_str());
+      prim->SetPDGCode(ptl->GetG4code()->GetPDGEncoding());
     }
   }
 
